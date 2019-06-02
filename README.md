@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.org/IBM/spring-boot-microservices-on-kubernetes.svg?branch=master)](https://travis-ci.org/IBM/spring-boot-microservices-on-kubernetes)
-
 # Build and deploy Java Spring Boot microservices on Kubernetes
 
 *Read this in other languages: [한국어](README-ko.md)、[中国](README-cn.md).*
@@ -35,20 +33,17 @@ The application uses a Java 8/Spring Boot microservice that computes the interes
 
 # Prerequisite
 
-* Create a Kubernetes cluster with either [Minikube](https://kubernetes.io/docs/getting-started-guides/minikube) for local testing, [IBM Cloud Private](https://github.com/IBM/Kubernetes-container-service-GitLab-sample/blob/master/docs/deploy-with-ICP.md), or with [IBM Cloud Kubernetes Service](https://github.com/IBM/container-journey-template) to deploy in cloud. The code here is regularly tested against [Kubernetes Cluster from IBM Cloud](https://console.ng.bluemix.net/docs/containers/cs_ov.html#cs_ov) using Travis.
+* Create a Kubernetes cluster with [IBM Cloud Kubernetes Service](https://github.com/IBM/container-journey-template) to deploy in cloud.
 
-* [Slack Incoming Webhook](https://api.slack.com/incoming-webhooks) in your Slack team. _(If you want to receive a test notification in Step 4.)_
-
-* [IBM Cloud Function CLI](https://console.bluemix.net/openwhisk/learn/cli/) to create IBM Cloud Functions. _(If you want to do Step 4.)_
-
+* [Maven installation](https://maven.apache.org/index.html)
 
 # Steps
 1. [Clone the repo](#1-clone-the-repo)
 2. [Create the Database service](#2-create-the-database-service)
 3. [Create the Spring Boot Microservices](#3-create-the-spring-boot-microservices)
-4. [Use IBM Cloud Functions with Notification service *(Optional)*](#4-use-ibm-cloud-functions-with-notification-service)
-5. [Deploy the Microservices](#5-deploy-the-microservices)
-6. [Access Your Application](#6-access-your-application)
+4. [Deploy the Microservices](#5-deploy-the-microservices)
+5. [Access Your Application](#6-access-your-application)
+6. [Scale up deployment replicas](#7-scale-up-deployment-replicas)
 
 ### 1. Clone the repo
 
@@ -60,17 +55,11 @@ $ git clone https://github.com/IBM/spring-boot-microservices-on-kubernetes
 
 ### 2. Create the Database service
 
-The backend consists of a MySQL database and the Spring Boot app. Each
-microservice has a Deployment and a Service. The deployment manages
-the pods started for each microservice. The Service creates a stable
-DNS entry for each microservice so they can reference their
-dependencies by name.
+The backend consists of a MySQL database and the Spring Boot app. Each microservice has a Deployment and a Service. The deployment manages the pods started for each microservice. The Service creates a stable DNS entry for each microservice so they can reference their dependencies by name.
 
-* There are two ways to create the MySQL database backend:
-  **Use MySQL in container** *OR*
-  **Use IBM Cloud Compose for MySQL**
+  **Use MySQL in container**
 
-* Use MySQL in container _(Option 1)_
+* Use MySQL in container
 
 ```bash
 $ kubectl create -f account-database.yaml
@@ -86,28 +75,6 @@ secret "demo-credentials" created
 ```
 
 Continue on in [Step 3](#3-create-the-spring-boot-microservices).
-
-* Use IBM Cloud Compose for MySQL _(Option 2)_
-
-Provision [IBM Cloud Compose for MySQL](https://console.ng.bluemix.net/catalog/services/compose-for-mysql). Go to Service credentials and view your credentials. Your MySQL hostname, port, user, and password are under your credential uri and it should look like this
-![images](images/mysqlservice.png)
-You will need to apply these credentials as a Secret in your Kubernetes cluster. It should be `base64` encoded.
-Use the script `./scripts/create-secrets.sh`. You will be prompted to enter your credentials. This will encode the credentials you input and apply them in your cluster as Secrets.
-
-```bash
-$ ./scripts/create-secrets.sh
-Enter MySQL username:
-admin
-Enter MySQL password:
-password
-Enter MySQL host:
-hostname
-Enter MySQL port:
-23966
-secret "demo-credentials" created
-```
-
-_You can also use the `secrets.yaml` file and edit the data values in it to your own base64 encoded credentials. Then do `kubectl apply -f secrets.yaml`._
 
 ### 3. Create the Spring Boot Microservices
 You will need to have [Maven installed in your environment](https://maven.apache.org/index.html).
@@ -127,10 +94,10 @@ After Maven has successfully built the Java project, you will need to build the 
 > Note: The compute-interest-api multiplies the fraction of the pennies to x100,000 for simulation purposes.
 
 ```bash
-Go to containers/compute-interest-api
+$ cd containers/compute-interest-api
 $ mvn package
 
-Go to containers/send-notification
+$ cd containers/send-notification
 $ mvn package
 
 ```
@@ -143,9 +110,12 @@ If you plan to use IBM Cloud Container Registry, you will need to setup your acc
 *We will be using IBM Cloud container registry to push images (hence the image naming), but the images [can be pushed in Docker hub](https://docs.docker.com/datacenter/dtr/2.2/guides/user/manage-images/pull-and-push-images) as well.*
 
 ```bash
-$ docker build -t registry.ng.bluemix.net/<YOUR_NAMESPACE>/compute-interest-api .
-$ docker build -t registry.ng.bluemix.net/<YOUR_NAMESPACE>/send-notification .
+$ cd containers/compute-interest-api
+$ docker build -t registry.ng.bluemix.net/<YOUR_NAMESPACE>/compute-interest-api:1 .
 $ docker push registry.ng.bluemix.net/<YOUR_NAMESPACE>/compute-interest-api
+
+$ cd containers/send-notification
+$ docker build -t registry.ng.bluemix.net/<YOUR_NAMESPACE>/send-notification:1 .
 $ docker push registry.ng.bluemix.net/<YOUR_NAMESPACE>/send-notification
 ```
 
@@ -165,12 +135,11 @@ Once you have successfully pushed your images, you will need to modify the yaml 
     containers:
       - image: registry.ng.bluemix.net/<namespace>/send-notification # replace with your image name
 ```
-
-There are two types of notifications possible, either `Using default email service with Notification service` or `Use IBM Cloud Functions with Notification Service`
+To enable notifications `Using default email service with Notification service` 
 
 * Using default email service (gmail) with Notification service
 
-You will need to modify the **environment variables** in the `send-notification.yaml`:
+You will need to modify only the **environment variables** shown below in the `send-notification.yaml`:
 ```yaml
     env:
     - name: GMAIL_SENDER_USER
@@ -181,107 +150,7 @@ You will need to modify the **environment variables** in the `send-notification.
        value: 'sendTo@gmail.com' # change this to the email of the receiver
 ```
 
-You may now proceed to [Step 5](#5-deploy-the-microservices) if you don't want to use IBM Cloud Functions.
-
-### 4. Use IBM Cloud Functions with Notification service
-> This is an optional step if you want to try IBM Cloud Functions
-
-* Create Actions
-The root directory of this repository contains the required code for you to create IBM Cloud Functions. You can create Actions using the `ibmcloud wsk` or `wsk` command.
-
-Create action for sending **Slack Notification**
-```bash
-$ wsk action create sendSlackNotification sendSlack.js --param url https://hooks.slack.com/services/XXXX/YYYY/ZZZZ --web true
-# Replace the url with your Slack team's incoming webhook url.
-```
-
-Create action for sending **Gmail Notification**
-```bash
-$ wsk action create sendEmailNotification sendEmail.js --web true
-```
-
-* Test Actions
-
-You can test your IBM Cloud Function Actions using `wsk action invoke [action name] [add --param to pass  parameters]`
-
-Invoke Slack Notification
-```bash
-$ wsk action invoke sendSlackNotification --param text "Hello from OpenWhisk"
-```
-
-Invoke Email Notification
-```bash
-$ wsk action invoke sendEmailNotification --param sender [sender email] --param password [sender password]--param receiver [receiver email] --param subject [Email subject] --param text [Email Body]
-```
-You should receive a slack message and receive an email respectively.
-
-* Create REST API for Actions
-
-You can map REST API endpoints for your created actions using `wsk api create`. The syntax for it is `wsk api create [base-path] [api-path] [verb (GET PUT POST etc)] [action name]`
-
-Create endpoint for **Slack Notification**
-
-```bash
-$ wsk api create /v1 /slack POST sendSlackNotification
-
-ok: created API /v1/slack POST for action /_/sendEmailNotification
-https://service.us.apiconnect.ibmcloud.com/gws/apigateway/api/.../v1/slack
-```
-
-Create endpoint for **Gmail Notification**
-```bash
-$ wsk api create /v1 /email POST sendEmailNotification
-ok: created API /v1/email POST for action /_/sendEmailNotification
-https://service.us.apiconnect.ibmcloud.com/gws/apigateway/api/.../v1/email
-```
-
-You can view a list of your APIs with this command:
-
-```bash
-$ wsk api list
-
-ok: APIs
-Action                                      Verb  API Name  URL
-/Anthony.Amanse_dev/sendEmailNotificatio    post       /v1  https://service.us.apiconnect.ibmcloud.com/gws/apigateway/api/.../v1/email
-/Anthony.Amanse_dev/testDefault             post       /v1  https://service.us.apiconnect.ibmcloud.com/gws/apigateway/api/.../v1/slack
-```
-
-Take note of your API URLs. You are going to use them later.
-
-* Test REST API Url
-
-Test endpoint for **Slack Notification**. Replace the URL with your own API URL.
-
-```bash
-$ curl -X POST -H 'Content-type: application/json' -d '{ "text": "Hello from OpenWhisk" }' https://service.us.apiconnect.ibmcloud.com/gws/apigateway/api/.../v1/slack
-```
-
-![Slack Notification](images/slackNotif.png)
-
-Test endpoint for **Gmail Notification**. Replace the URL with your own API URL. Replace the value of the parameters **sender, password, receiver, subject** with your own.
-
-```bash
-$ curl -X POST -H 'Content-type: application/json' -d '{ "text": "Hello from OpenWhisk", "subject": "Email Notification", "sender": "testemail@gmail.com", "password": "passwordOfSender", "receiver": "receiversEmail" }' https://service.us.apiconnect.ibmcloud.com/gws/apigateway/api/.../v1/email
-```
-![Email Notification](images/emailNotif.png)
-
-* Add REST API Url to yaml files
-
-Once you have confirmed that your APIs are working, put the URLs in your `send-notification.yaml` file
-```yaml
-env:
-- name: GMAIL_SENDER_USER
-  value: 'username@gmail.com' # the sender's email
-- name: GMAIL_SENDER_PASSWORD
-  value: 'password' # the sender's password
-- name: EMAIL_RECEIVER
-  value: 'sendTo@gmail.com' # the receiver's email
-- name: OPENWHISK_API_URL_SLACK
-  value: 'https://service.us.apiconnect.ibmcloud.com/gws/apigateway/api/.../v1/slack' # your API endpoint for slack notifications
-- name: SLACK_MESSAGE
-  value: 'Your balance is over $50,000.00' # your custom message
-- name: OPENWHISK_API_URL_EMAIL
-  value: 'https://service.us.apiconnect.ibmcloud.com/gws/apigateway/api/.../v1/email' # your API endpoint for email notifications
+You may now proceed to [Step 5](#5-deploy-the-microservices)
 ```
 
 ### 5. Deploy the Microservices
