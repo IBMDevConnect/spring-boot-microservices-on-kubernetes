@@ -33,9 +33,15 @@ The application uses a Java 8/Spring Boot microservice that computes the interes
 
 # Prerequisite
 
-* Create a Kubernetes cluster with [IBM Cloud Kubernetes Service](https://github.com/IBM/container-journey-template) to deploy in cloud.
+* Create a Kubernetes cluster with [IBM Cloud Kubernetes Service](https://cloud.ibm.com/kubernetes/catalog/cluster) to deploy in cloud.
 
 * [Maven installation](https://maven.apache.org/index.html)
+
+* Kubectl Installation
+
+* Docker Installation
+
+* IBM Cloud CLI Installation
 
 # Steps
 1. [Clone the repo](#1-clone-the-repo)
@@ -43,7 +49,6 @@ The application uses a Java 8/Spring Boot microservice that computes the interes
 3. [Create the Spring Boot Microservices](#3-create-the-spring-boot-microservices)
 4. [Deploy the Microservices](#5-deploy-the-microservices)
 5. [Access Your Application](#6-access-your-application)
-6. [Scale up deployment replicas](#7-scale-up-deployment-replicas)
 
 ### 1. Clone the repo
 
@@ -52,6 +57,21 @@ Clone this repository. In a terminal, run:
 ```
 $ git clone https://github.com/IBM/spring-boot-microservices-on-kubernetes
 ```
+
+### Login to IBM Cloud & download container service and container registry plugin
+
+```
+$ ibmcloud login
+$ ibmcloud target --cf
+$ ibmcloud cr login
+$ docker login
+$ ibmcloud plugin install container-service -r Bluemix
+$ $ ibmcloud plugin install container-registry -r Bluemix
+$ ibmcloud cs cluster-config --cluster <cluster name>
+```
+Set the KUBECONFIG environment variable. Copy the output from the previous command and paste it in your terminal. The command output looks similar to the following example:
+
+export KUBECONFIG=/Users/$USER/.bluemix/plugins/container-service/clusters/mybluechatter/kube-config-hou02-mybluechatter.yml
 
 ### 2. Create the Database service
 
