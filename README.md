@@ -173,7 +173,6 @@ You will need to modify only the **environment variables** shown below in the `s
 ```
 
 You may now proceed to [Step 5](#5-deploy-the-microservices)
-```
 
 ### 5. Deploy the Microservices
 
