@@ -63,12 +63,12 @@ $ git clone https://github.com/IBM/spring-boot-microservices-on-kubernetes
 ```
 $ ibmcloud login
 $ ibmcloud target --cf
+$ ibmcloud plugin install container-service -r Bluemix
+$ ibmcloud plugin install container-registry -r Bluemix
 $ ibmcloud cr login
 $ ibmcloud cr namespace-add <add-name>
 $ ibmcloud cr namespace-list
 $ docker login
-$ ibmcloud plugin install container-service -r Bluemix
-$ ibmcloud plugin install container-registry -r Bluemix
 $ ibmcloud cs cluster-config --cluster <cluster name>
 ```
 Set the KUBECONFIG environment variable. Copy the output from the previous command and paste it in your terminal. The command output looks similar to the following example:
