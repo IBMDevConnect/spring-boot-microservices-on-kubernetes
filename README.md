@@ -231,6 +231,8 @@ account-summary         10.10.10.74    <nodes>       80:30080/TCP               
 * On your browser, go to `http://<your-cluster-IP>:30080`
 ![Account-balance](images/balance.png)
 
+* Please refer [https://github.com/IBM/spring-boot-microservices-on-kubernetes](https://github.com/IBM/spring-boot-microservices-on-kubernetes) for deploying and invoking notification service. It isn't covered in this workshop. 
+
 ## Troubleshooting
 * To start over, delete everything: `kubectl delete svc,deploy -l app=office-space`
 
